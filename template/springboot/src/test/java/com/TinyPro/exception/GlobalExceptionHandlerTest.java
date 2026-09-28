@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.server.ResponseStatusException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -21,6 +22,17 @@ class GlobalExceptionHandlerTest {
 
         assertEquals(HttpStatus.BAD_REQUEST.value(), response.getStatusCode().value());
         assertEquals("application exists", ((ErrorResponse) response.getBody()).getMessage());
+    }
+
+    @Test
+    void mapsSpringErrorResponseStatus() {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/missing");
+
+        ResponseEntity<?> response = handler.handleException(
+                new NoResourceFoundException(org.springframework.http.HttpMethod.GET, "/missing"), request);
+
+        assertEquals(HttpStatus.NOT_FOUND.value(), response.getStatusCode().value());
+        assertEquals(HttpStatus.NOT_FOUND.value(), ((ErrorResponse) response.getBody()).getStatusCode());
     }
 
     @Test

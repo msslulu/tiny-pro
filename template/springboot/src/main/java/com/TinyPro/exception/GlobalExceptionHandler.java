@@ -10,12 +10,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.text.MessageFormat;
 import java.util.stream.Collectors;
@@ -44,18 +44,6 @@ public class GlobalExceptionHandler {
                             HttpStatus.BAD_REQUEST.value()));
         }
 
-        if (ex instanceof ResponseStatusException statusException) {
-            logger.warn("Request rejected: {} {} -> {} ({})",
-                    request.getMethod(), request.getRequestURI(),
-                    statusException.getStatusCode().value(), statusException.getReason());
-            int status = statusException.getStatusCode().value();
-            HttpStatus knownStatus = HttpStatus.resolve(status);
-            String message = statusException.getReason() != null
-                    ? statusException.getReason()
-                    : knownStatus == null ? "Request failed" : knownStatus.getReasonPhrase();
-            return ResponseEntity.status(status).body(new ErrorResponse(message, status));
-        }
-
         if (ex instanceof MethodArgumentNotValidException validationException) {
             String errorMessage = validationException.getBindingResult()
                     .getFieldErrors()
@@ -75,6 +63,22 @@ public class GlobalExceptionHandler {
             logger.warn("Request validation failed: {} {} -> {}",
                     request.getMethod(), request.getRequestURI(), errorMessage);
             return validationError(errorMessage);
+        }
+
+        if (ex instanceof org.springframework.web.ErrorResponse errorResponse) {
+            String detail = errorResponse.getBody() == null
+                    ? null
+                    : errorResponse.getBody().getDetail();
+            logger.warn("Request rejected: {} {} -> {} ({})",
+                    request.getMethod(), request.getRequestURI(),
+                    errorResponse.getStatusCode().value(), detail);
+            HttpStatusCode statusCode = errorResponse.getStatusCode();
+            int status = statusCode.value();
+            HttpStatus knownStatus = HttpStatus.resolve(status);
+            String message = detail != null && !detail.isBlank()
+                    ? detail
+                    : knownStatus == null ? "Request failed" : knownStatus.getReasonPhrase();
+            return ResponseEntity.status(status).body(new ErrorResponse(message, status));
         }
 
         if (ex instanceof DataIntegrityViolationException
