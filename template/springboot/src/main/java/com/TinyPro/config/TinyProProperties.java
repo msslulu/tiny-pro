@@ -1,5 +1,6 @@
 package com.TinyPro.config;
 
+import ch.qos.logback.core.util.FileSize;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Max;
@@ -8,7 +9,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.util.unit.DataSize;
 import org.springframework.validation.annotation.Validated;
 
 /**
@@ -113,8 +113,10 @@ public class TinyProProperties {
                 return false;
             }
             try {
-                return DataSize.parse(value).toBytes() > 0;
-            } catch (IllegalArgumentException ex) {
+                // Use Logback's parser because these values are passed directly
+                // to SizeAndTimeBasedRollingPolicy.
+                return FileSize.valueOf(value).getSize() > 0;
+            } catch (RuntimeException ex) {
                 return false;
             }
         }

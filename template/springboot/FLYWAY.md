@@ -10,9 +10,36 @@ Create the configured MySQL database, then start the application. Flyway runs `V
 
 ## Existing database
 
-Back up the database before the first deployment. With the default `FLYWAY_BASELINE_ON_MIGRATE=true`, Flyway baselines a non-empty database at version `1` and does not execute the initial create-table migration. This is intended for the existing TinyPro schema.
+Back up the database before the first deployment. Do not start the production application until an existing non-empty database has a Flyway history.
 
-For a production deployment, verify the existing schema first and then set `FLYWAY_BASELINE_ON_MIGRATE=false`. Future migrations must be applied explicitly and must pass Flyway validation before the application starts.
+First verify that the existing schema matches the expected TinyPro schema, including the tables and columns referenced by `V1__init_schema.sql`. Do not baseline a database whose schema is incomplete or incompatible; reconcile it with a reviewed migration first.
+
+If the database is valid and does not contain `flyway_schema_history`, run a one-time baseline with the Flyway CLI:
+
+```bash
+flyway info \
+  -url="$DATABASE_URL" \
+  -user="$DATABASE_USERNAME" \
+  -password="$DATABASE_PASSWORD"
+
+flyway baseline \
+  -url="$DATABASE_URL" \
+  -user="$DATABASE_USERNAME" \
+  -password="$DATABASE_PASSWORD" \
+  -baselineVersion=1 \
+  -baselineDescription="Existing TinyPro schema"
+
+flyway validate \
+  -url="$DATABASE_URL" \
+  -user="$DATABASE_USERNAME" \
+  -password="$DATABASE_PASSWORD"
+```
+
+The baseline records the existing schema as version `1`; it does not execute `V1__init_schema.sql`. Subsequent application startup can then apply `V2` and later migrations.
+
+After the one-time baseline, set `FLYWAY_BASELINE_ON_MIGRATE=false` and start the production application. Future migrations must be applied explicitly and must pass Flyway validation before the application starts.
+
+For a controlled first startup instead of the CLI, `FLYWAY_BASELINE_ON_MIGRATE=true` may be supplied for that single deployment only, after schema verification. Set it back to `false` immediately after startup and never use automatic baselining as the normal production setting.
 
 Useful settings:
 

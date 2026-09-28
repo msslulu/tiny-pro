@@ -27,4 +27,23 @@ class TinyProPropertiesTest {
 
         assertFalse(validator.validate(properties).isEmpty());
     }
+
+    @Test
+    void acceptsLogbackSizeUnits() {
+        TinyProProperties properties = new TinyProProperties();
+        properties.getJwt().setSecret("a-valid-secret");
+        properties.getLogging().setMaxFileSize("1GB");
+        properties.getLogging().setTotalSizeCap("512MB");
+
+        assertTrue(validator.validate(properties).isEmpty());
+    }
+
+    @Test
+    void rejectsUnitsUnsupportedByLogback() {
+        TinyProProperties properties = new TinyProProperties();
+        properties.getJwt().setSecret("a-valid-secret");
+        properties.getLogging().setMaxFileSize("1TB");
+
+        assertFalse(validator.validate(properties).isEmpty());
+    }
 }
