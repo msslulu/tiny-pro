@@ -20,11 +20,13 @@ If the database is valid and does not contain `flyway_schema_history`, run a one
 flyway info \
   -url="$DATABASE_URL" \
   -user="$DATABASE_USERNAME" \
+  -locations=filesystem:src/main/resources/db/migration \
   -password="$DATABASE_PASSWORD"
 
 flyway baseline \
   -url="$DATABASE_URL" \
   -user="$DATABASE_USERNAME" \
+  -locations=filesystem:src/main/resources/db/migration \
   -password="$DATABASE_PASSWORD" \
   -baselineVersion=1 \
   -baselineDescription="Existing TinyPro schema"
@@ -32,6 +34,7 @@ flyway baseline \
 flyway validate \
   -url="$DATABASE_URL" \
   -user="$DATABASE_USERNAME" \
+  -locations=filesystem:src/main/resources/db/migration \
   -password="$DATABASE_PASSWORD"
 ```
 
