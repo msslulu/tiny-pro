@@ -16,26 +16,25 @@ First verify that the existing schema matches the expected TinyPro schema, inclu
 
 If the database is valid and does not contain `flyway_schema_history`, run a one-time baseline with the Flyway CLI:
 
+Inject the database credentials from the deployment secret manager or protected shell environment. Flyway reads these `FLYWAY_*` variables without exposing the password as a process argument. Do not commit or print the password.
+
 ```bash
+export FLYWAY_URL="$DATABASE_URL"
+export FLYWAY_USER="$DATABASE_USERNAME"
+export FLYWAY_PASSWORD="$DATABASE_PASSWORD"
+
 flyway info \
-  -url="$DATABASE_URL" \
-  -user="$DATABASE_USERNAME" \
-  -locations=filesystem:src/main/resources/db/migration \
-  -password="$DATABASE_PASSWORD"
+  -locations=filesystem:src/main/resources/db/migration
 
 flyway baseline \
-  -url="$DATABASE_URL" \
-  -user="$DATABASE_USERNAME" \
   -locations=filesystem:src/main/resources/db/migration \
-  -password="$DATABASE_PASSWORD" \
   -baselineVersion=1 \
   -baselineDescription="Existing TinyPro schema"
 
 flyway validate \
-  -url="$DATABASE_URL" \
-  -user="$DATABASE_USERNAME" \
-  -locations=filesystem:src/main/resources/db/migration \
-  -password="$DATABASE_PASSWORD"
+  -locations=filesystem:src/main/resources/db/migration
+
+unset FLYWAY_PASSWORD
 ```
 
 The baseline records the existing schema as version `1`; it does not execute `V1__init_schema.sql`. Subsequent application startup can then apply `V2` and later migrations.
