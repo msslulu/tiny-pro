@@ -66,14 +66,21 @@ public class GlobalExceptionHandler {
         }
 
         if (ex instanceof org.springframework.web.ErrorResponse errorResponse) {
+            HttpStatusCode statusCode = errorResponse.getStatusCode();
+            int status = statusCode.value();
+            if (status >= 500) {
+                logger.error("Server error for {} {} -> {}",
+                        request.getMethod(), request.getRequestURI(), status, ex);
+                return ResponseEntity.status(status)
+                        .body(new ErrorResponse(Contants.PUBLIC_ERROR, status));
+            }
+
             String detail = errorResponse.getBody() == null
                     ? null
                     : errorResponse.getBody().getDetail();
             logger.warn("Request rejected: {} {} -> {} ({})",
                     request.getMethod(), request.getRequestURI(),
-                    errorResponse.getStatusCode().value(), detail);
-            HttpStatusCode statusCode = errorResponse.getStatusCode();
-            int status = statusCode.value();
+                    status, detail);
             HttpStatus knownStatus = HttpStatus.resolve(status);
             String message = detail != null && !detail.isBlank()
                     ? detail

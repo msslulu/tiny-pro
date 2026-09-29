@@ -36,6 +36,19 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void hidesDetailsForServerErrorResponse() {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/user");
+
+        ResponseEntity<?> response = handler.handleException(
+                new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                        "SQL connection details must not be returned"), request);
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR.value(), response.getStatusCode().value());
+        assertEquals(com.TinyPro.entity.contants.Contants.PUBLIC_ERROR,
+                ((ErrorResponse) response.getBody()).getMessage());
+    }
+
+    @Test
     void logsAndHidesUnexpectedExceptionDetails() {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/application");
 
