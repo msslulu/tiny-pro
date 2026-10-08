@@ -19,8 +19,20 @@ CREATE TABLE `menu` (
     `component` VARCHAR(255) NULL,
     `path` VARCHAR(255) NULL,
     `locale` VARCHAR(255) NULL,
+    `menu_identity_hash` BINARY(32) GENERATED ALWAYS AS (
+        UNHEX(SHA2(CONCAT(
+            IF(`name` IS NULL, '-1:', CONCAT(CHAR_LENGTH(`name`), ':', `name`)),
+            IF(`order` IS NULL, '-1:', CONCAT(CHAR_LENGTH(`order`), ':', `order`)),
+            IF(`menuType` IS NULL, '-1:', CONCAT(CHAR_LENGTH(`menuType`), ':', `menuType`)),
+            IF(`parentId` IS NULL, '-1:', CONCAT(CHAR_LENGTH(`parentId`), ':', `parentId`)),
+            IF(`path` IS NULL, '-1:', CONCAT(CHAR_LENGTH(`path`), ':', `path`)),
+            IF(`icon` IS NULL, '-1:', CONCAT(CHAR_LENGTH(`icon`), ':', `icon`)),
+            IF(`component` IS NULL, '-1:', CONCAT(CHAR_LENGTH(`component`), ':', `component`)),
+            IF(`locale` IS NULL, '-1:', CONCAT(CHAR_LENGTH(`locale`), ':', `locale`))
+        ), 256))
+    ) STORED,
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_menu_name` (`name`)
+    UNIQUE KEY `uk_menu_identity` (`menu_identity_hash`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `role` (
@@ -51,9 +63,7 @@ CREATE TABLE `user` (
     `protocol_end` DATE NULL,
     `address` VARCHAR(255) NULL,
     `status` INT NULL,
-    `createTime` DATE NULL,
     `create_time` DATE NULL,
-    `updateTime` DATE NULL,
     `update_time` DATE NULL,
     `salt` VARCHAR(64) NULL,
     PRIMARY KEY (`id`),
@@ -119,8 +129,8 @@ CREATE TABLE `application` (
     `tag` TEXT NULL,
     `icon` VARCHAR(255) NULL,
     `classify` VARCHAR(255) NULL,
-    `createdAt` DATETIME(6) NULL,
-    `updatedAt` DATETIME(6) NULL,
+    `created_at` DATETIME(6) NULL,
+    `updated_at` DATETIME(6) NULL,
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_application_name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

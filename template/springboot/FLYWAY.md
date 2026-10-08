@@ -12,7 +12,7 @@ Create the configured MySQL database, then start the application. Flyway runs `V
 
 Back up the database before the first deployment. Do not start the production application until an existing non-empty database has a Flyway history.
 
-First verify that the existing schema matches the expected TinyPro schema, including the tables and columns referenced by `V1__init_schema.sql`. Do not baseline a database whose schema is incomplete or incompatible; reconcile it with a reviewed migration first.
+First verify that the existing schema matches the final schema defined by `V1__init_schema.sql`, including the `application` table, `application.created_at`/`updated_at`, the NULL-safe full-field menu identity, and the `user.create_time`/`update_time` columns. Do not baseline a database whose schema is incomplete or incompatible; reconcile it with a reviewed migration first.
 
 If the database is valid and does not contain `flyway_schema_history`, run a one-time baseline with the Flyway CLI:
 
@@ -37,7 +37,7 @@ flyway validate \
 unset FLYWAY_PASSWORD
 ```
 
-The baseline records the existing schema as version `1`; it does not execute `V1__init_schema.sql`. Subsequent application startup can then apply `V2` and later migrations.
+The baseline records the existing schema as version `1`; it does not execute `V1__init_schema.sql`. Future schema changes can then be added as new migrations starting at `V2`.
 
 After the one-time baseline, set `FLYWAY_BASELINE_ON_MIGRATE=false` and start the production application. Future migrations must be applied explicitly and must pass Flyway validation before the application starts.
 
