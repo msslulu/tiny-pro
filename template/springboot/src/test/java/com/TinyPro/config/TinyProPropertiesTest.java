@@ -3,8 +3,10 @@ package com.TinyPro.config;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.env.MockEnvironment;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TinyProPropertiesTest {
@@ -45,5 +47,14 @@ class TinyProPropertiesTest {
         properties.getLogging().setMaxFileSize("1TB");
 
         assertFalse(validator.validate(properties).isEmpty());
+    }
+
+    @Test
+    void rejectsInvalidLoggingConfigurationBeforeLogbackInitialization() {
+        MockEnvironment environment = new MockEnvironment()
+                .withProperty("tinypro.logging.max-file-size", "not-a-size");
+
+        assertThrows(IllegalStateException.class, () ->
+                new TinyProLoggingEnvironmentPostProcessor().postProcessEnvironment(environment, null));
     }
 }

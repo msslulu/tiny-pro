@@ -18,12 +18,22 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.text.MessageFormat;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final Map<String, String> CONSTRAINT_MESSAGE_CODES = Map.of(
+            "uk_permission_name", "exception.permission.conflict",
+            "uk_role_name", "exception.role.uniqueConflict",
+            "uk_lang_name", "exception.lang.conflict",
+            "uk_user_email", "exception.user.userExists",
+            "uk_menu_identity", "exception.menu.conflict",
+            "uk_i18_lang_key", "exception.i18.conflict",
+            "uk_application_name", "exception.application.conflict"
+    );
 
     @Autowired
     private MessageSource messageSource;
@@ -90,8 +100,13 @@ public class GlobalExceptionHandler {
 
         if (ex instanceof DataIntegrityViolationException
                 || ex instanceof org.hibernate.exception.ConstraintViolationException) {
-            logger.error("Database constraint violation for {} {}",
-                    request.getMethod(), request.getRequestURI(), ex);
+            String constraintName = findConstraintName(ex);
+            if (constraintName != null && CONSTRAINT_MESSAGE_CODES.containsKey(constraintName)) {
+                return handleDataIntegrityViolation(request, constraintName);
+            }
+
+            logger.error("Database integrity violation for {} {} (constraint={})",
+                    request.getMethod(), request.getRequestURI(), constraintName, ex);
         } else {
             logger.error("Unhandled exception for {} {}",
                     request.getMethod(), request.getRequestURI(), ex);
@@ -100,6 +115,41 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ErrorResponse(Contants.PUBLIC_ERROR, HttpStatus.INTERNAL_SERVER_ERROR.value()));
+    }
+
+    private ResponseEntity<ErrorResponse> handleDataIntegrityViolation(
+            HttpServletRequest request, String constraintName) {
+        String messageCode = CONSTRAINT_MESSAGE_CODES.get(constraintName);
+        String message = messageSource == null
+                ? "Resource already exists or conflicts with the current state"
+                : messageSource.getMessage(messageCode, null, LocaleUntil.getLocale());
+
+        logger.warn("Database constraint violation for {} {} (constraint={})",
+                request.getMethod(), request.getRequestURI(), constraintName);
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(message, HttpStatus.CONFLICT.value()));
+    }
+
+    private String findConstraintName(Throwable exception) {
+        Throwable current = exception;
+        while (current != null) {
+            if (current instanceof org.hibernate.exception.ConstraintViolationException constraintException
+                    && constraintException.getConstraintName() != null) {
+                return constraintException.getConstraintName();
+            }
+
+            String detail = current.getMessage();
+            if (detail != null) {
+                for (String constraintName : CONSTRAINT_MESSAGE_CODES.keySet()) {
+                    if (detail.contains(constraintName)) {
+                        return constraintName;
+                    }
+                }
+            }
+            current = current.getCause();
+        }
+        return null;
     }
 
     private ResponseEntity<ErrorResponse> handleBusinessException(BusinessException exception) {

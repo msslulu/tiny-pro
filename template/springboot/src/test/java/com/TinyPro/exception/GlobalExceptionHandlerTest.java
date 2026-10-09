@@ -1,6 +1,8 @@
 package com.TinyPro.exception;
 
+import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -54,6 +56,33 @@ class GlobalExceptionHandlerTest {
 
         ResponseEntity<?> response = handler.handleException(
                 new IllegalStateException("database password=should-not-be-returned"), request);
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR.value(), response.getStatusCode().value());
+        assertEquals(com.TinyPro.entity.contants.Contants.PUBLIC_ERROR,
+                ((ErrorResponse) response.getBody()).getMessage());
+    }
+
+    @Test
+    void mapsUniqueConstraintViolationToConflict() {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/user");
+        ConstraintViolationException cause = new ConstraintViolationException(
+                "duplicate user email", null, "uk_user_email");
+
+        ResponseEntity<?> response = handler.handleException(
+                new DataIntegrityViolationException("could not insert", cause), request);
+
+        assertEquals(HttpStatus.CONFLICT.value(), response.getStatusCode().value());
+        assertEquals(HttpStatus.CONFLICT.value(), ((ErrorResponse) response.getBody()).getStatusCode());
+    }
+
+    @Test
+    void keepsForeignKeyViolationAsServerError() {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/i18");
+        ConstraintViolationException cause = new ConstraintViolationException(
+                "foreign key violation", null, "fk_i18_lang");
+
+        ResponseEntity<?> response = handler.handleException(
+                new DataIntegrityViolationException("could not insert", cause), request);
 
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR.value(), response.getStatusCode().value());
         assertEquals(com.TinyPro.entity.contants.Contants.PUBLIC_ERROR,
